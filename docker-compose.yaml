@@ -1,0 +1,52 @@
+version: '3.7'
+services:
+    discuss-server:
+        image: jwilder/nginx-proxy:alpine
+        ports:
+            - '80:80'
+            - '443:443'
+        volumes:
+            - ./certs:/etc/nginx/certs
+            - /var/run/docker.sock:/tmp/docker.sock:ro
+        restart: unless-stopped
+        logging:
+            driver: none
+
+    discuss-app:
+        build: .
+        image: discuss
+        volumes:
+            - .:/usr/src/app
+            - app_build:/usr/src/app/_build
+        ports:
+            - '4000:4000'
+        environment:
+            - PORT=80
+            - MIX_ENV=dev
+            - DB_NAME=discuss_db
+            - DB_USER=postgres
+            - DB_PASS=postgres
+            - DB_PORT=5432
+            - DB_HOST=discuss-db
+        depends_on:
+            - discuss-db
+            - discuss-server
+
+    discuss-db:
+        image: postgres:11.5-alpine
+        ports:
+            - '5432:5432'
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_DB=discuss_db
+            - PGDATA=/var/lib/postgresql/data/pgdata
+        restart: always
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        logging:
+            driver: none
+
+volumes:
+    pgdata:
+    app_build:
